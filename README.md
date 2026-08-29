@@ -62,6 +62,15 @@ python3 -m http.server 8000
 # then visit http://localhost:8000
 ```
 
+## Running it in Docker
+
+For hosting it locally under Docker Desktop, with an edit loop that needs no
+rebuild, see [docs/DOCKER.md](docs/DOCKER.md):
+
+```sh
+docker compose up -d      # then open http://localhost:8080
+```
+
 ## Layout
 
 | Path | What it is |
