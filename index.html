@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meeter — Meeting Planner</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="ds/modernist.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="nav app-header">
+    <div class="brand-group">
+      <div class="nav-brand app-brand">Meeting Planner</div>
+      <div class="brand-sub">Across time zones</div>
+    </div>
+    <div class="overlap-group">
+      <div class="overlap-lbl">Shared working hours</div>
+      <div class="tag tag-accent overlap-tag" id="overlapTag"></div>
+    </div>
+  </header>
+
+  <div class="body-row">
+
+    <aside class="rail">
+
+      <div class="field-block">
+        <div class="lbl">Meeting date</div>
+        <input class="input date-input" type="date" id="dateInput" aria-label="Meeting date">
+        <div class="date-long" id="dateLong"></div>
+        <div id="weekendBanner"></div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="field-block">
+        <div class="lbl">Add participant</div>
+        <input class="input name-input" id="nameInput" placeholder="Name" aria-label="Participant name">
+        <div class="search-row">
+          <input class="input search-input" id="queryInput" placeholder="Search city or time zone" aria-label="Search city or time zone">
+          <button class="btn btn-secondary caret-btn" id="caretBtn" title="Browse time zones" aria-label="Browse time zones">&#9660;</button>
+        </div>
+        <div id="tzDropdown"></div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="field-block people-block">
+        <div class="people-head">
+          <div class="lbl">Participants</div>
+          <div class="count-lbl" id="countLabel"></div>
+        </div>
+        <div id="peopleList"></div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="field-block">
+        <div class="lbl">Working hours</div>
+        <div class="settings-group">
+          <div class="setting-row">
+            <div class="setting-name">Default day starts</div>
+            <div class="setting-control">
+              <input class="num-input" type="number" id="setWorkStart" min="0" max="23" step="1" aria-label="Default work start hour">
+              <span class="setting-name">h</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-name">Default day ends</div>
+            <div class="setting-control">
+              <input class="num-input" type="number" id="setWorkEnd" min="1" max="24" step="1" aria-label="Default work end hour">
+              <span class="setting-name">h</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-name">Weekends are off</div>
+            <div class="setting-control">
+              <input class="check" type="checkbox" id="setWeekendsOff" aria-label="Weekends are off">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-block">
+        <div class="lbl">Display</div>
+        <div class="settings-group">
+          <div class="setting-row">
+            <div class="setting-name">Time format</div>
+            <div class="setting-control">
+              <select class="hour-select" id="setTimeFormat" aria-label="Time format">
+                <option value="24-hour">24-hour</option>
+                <option value="12-hour">12-hour</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-name">Hour range</div>
+            <div class="setting-control">
+              <select class="hour-select" id="setHourRange" aria-label="Hour range">
+                <option value="Full 24 hours">Full 24 hours</option>
+                <option value="Waking hours (06&ndash;23)">Waking hours (06&ndash;23)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <section class="main">
+
+      <div class="toolbar" id="toolbar"></div>
+
+      <div class="grid-area">
+        <div id="gridWrap"></div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="swatch" style="background:var(--color-accent-200)"></div>
+            <div class="legend-lbl">Everyone working</div>
+          </div>
+          <div class="legend-item">
+            <div class="swatch" style="background:var(--color-neutral-100)"></div>
+            <div class="legend-lbl muted">Working hours</div>
+          </div>
+          <div class="legend-item">
+            <div class="swatch" style="background:var(--color-neutral-200)"></div>
+            <div class="legend-lbl muted">Off hours</div>
+          </div>
+          <div class="legend-item">
+            <div class="swatch" style="background:var(--color-neutral-400)"></div>
+            <div class="legend-lbl muted">Night</div>
+          </div>
+          <div class="legend-note">+1 / &minus;1 marks a different calendar day.</div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
