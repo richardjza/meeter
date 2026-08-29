@@ -1,0 +1,25 @@
+# Local hosting for Meeter.
+#
+# The app is static files, so the source is bind-mounted straight into nginx
+# rather than baked into an image. Editing a file on the host changes what the
+# container serves immediately — a browser refresh is the whole deploy step.
+#
+#   docker compose up -d      start, then open http://localhost:8080
+#   docker compose down       stop and remove the container
+#
+# Use the Dockerfile instead when you want a self-contained image that runs
+# without the source tree present. See docs/DOCKER.md.
+
+services:
+  meeter:
+    image: nginx:stable-alpine
+    container_name: meeter
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./app.css:/usr/share/nginx/html/app.css:ro
+      - ./app.js:/usr/share/nginx/html/app.js:ro
+      - ./ds:/usr/share/nginx/html/ds:ro
+    restart: unless-stopped

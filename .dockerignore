@@ -1,0 +1,10 @@
+# Only the four static files and the nginx config belong in the image.
+.git
+.github
+node_modules
+tests
+package.json
+package-lock.json
+docs
+*.md
+compose.yaml
