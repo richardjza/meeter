@@ -70,10 +70,30 @@ python3 -m http.server 8000
 | `app.js` | State, time zone maths, view model and rendering |
 | `app.css` | Layout and component styling |
 | `ds/modernist.css` | Vendored Modernist design system: tokens and base classes |
+| `tests/` | End-to-end test suite and the static server it runs against |
 
 The interface is an implementation of the "Meeting planner across time zones"
 design canvas; `ds/modernist.css` is the design system that canvas was built
 against, vendored here so the app carries its own styling.
+
+## Tests
+
+The suite drives the real page in Chromium — no mocks, no test doubles. It
+pins the browser's time zone to `America/Los_Angeles` and uses fixed dates,
+so expected times and day boundaries are deterministic.
+
+```sh
+npm install
+npx playwright install chromium   # once, if the browser is not already present
+npm test
+```
+
+Playwright is the only dependency, and it is needed only for the tests — the
+app itself has none. If Chromium lives somewhere the default resolution does
+not find it, point at it with `CHROMIUM_PATH=/path/to/chrome npm test`.
+
+The suite starts its own static server on an ephemeral port, so nothing needs
+to be running beforehand.
 
 ## Contributing
 
