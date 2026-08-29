@@ -8,10 +8,8 @@ joining at 4am. Meeter exists to make that a ten-second job instead.
 
 ## Status
 
-Early days — this repository is currently just this README. The sections below
-describe what Meeter is meant to be, not what it does today. Treat anything
-under "Planned features" as intent rather than documentation, and expect the
-details to shift as the first version comes together.
+There is a working first version: a single-page app with no build step, no
+dependencies, and no server. Everything below describes what it actually does.
 
 ## The idea
 
@@ -30,20 +28,52 @@ The guiding principles:
   these right is the whole point of the tool, so they are handled explicitly
   rather than approximated.
 
-## Planned features
+## Features
 
-- Add participants by city or timezone.
-- A visual overlap view showing each participant's local hours side by side.
-- Sensible working-hour defaults, adjustable per person.
-- Highlighting of slots where a participant crosses into a different calendar
-  day.
-- A shareable summary of a chosen time, rendered in each participant's local
-  time.
+- **Add participants by city or time zone.** Search across roughly eighty
+  cities; the search matches city, country and IANA zone name, so "berlin"
+  finds both Berlin and Munich.
+- **A side-by-side overlap grid.** One column per participant, one row per
+  hour. Cells are shaded working / off-hours / night, and rows where everyone
+  is working are highlighted and marked `ALL`.
+- **Working-hour defaults, adjustable per person.** Set the default day once;
+  override it for anyone who keeps different hours.
+- **Day-boundary markers.** A cell shows `+1` or `−1` when that participant is
+  on a different calendar date from the anchor.
+- **Anchoring.** The hour rail reads in one participant's local day. Click any
+  column head to switch whose day the grid is expressed in.
+- **A slot summary.** Click an hour row to see that time rendered in every
+  participant's local time, each labelled working, off-hours or night.
+- **Weekend handling.** Weekends count as non-working by default, with a
+  one-click jump to the next weekday.
+
+Time zone conversion goes through `Intl.DateTimeFormat`, so daylight-saving
+shifts and half-hour offsets are handled by the platform's own zone database
+rather than approximated. Converting a wall-clock time back to an instant runs
+two passes, so an hour sitting on a DST transition still resolves correctly.
 
 ## Getting started
 
-There is nothing to install or run yet. Once there is a first working version,
-setup and usage instructions will live here.
+No install and no build. Open `index.html` in a browser, or serve the
+directory if you prefer a real origin:
+
+```sh
+python3 -m http.server 8000
+# then visit http://localhost:8000
+```
+
+## Layout
+
+| Path | What it is |
+| --- | --- |
+| `index.html` | Page shell — the static structure and its stable element IDs |
+| `app.js` | State, time zone maths, view model and rendering |
+| `app.css` | Layout and component styling |
+| `ds/modernist.css` | Vendored Modernist design system: tokens and base classes |
+
+The interface is an implementation of the "Meeting planner across time zones"
+design canvas; `ds/modernist.css` is the design system that canvas was built
+against, vendored here so the app carries its own styling.
 
 ## Contributing
 

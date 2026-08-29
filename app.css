@@ -1,0 +1,244 @@
+/* Meeting Planner — layout and component styling.
+   Converted from the "Meeting planner across time zones" design canvas;
+   values here mirror the artboard's inline styles one-for-one. */
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--color-bg); color: var(--color-text);
+  font-family: Archivo, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--color-accent-700); text-decoration: none; }
+a:hover { color: var(--color-accent); text-decoration: underline; }
+input, select, button { font-family: inherit; font-size: inherit; color: inherit; border-radius: 0; }
+button { cursor: pointer; }
+::selection { background: var(--color-accent-300); }
+input:focus-visible, select:focus-visible, button:focus-visible, div:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-400); }
+
+.app { min-height: 100vh; display: flex; flex-direction: column; background: var(--color-bg); }
+
+/* ── header ─────────────────────────────────────────────────────────── */
+.app-header {
+  align-items: flex-end; justify-content: space-between; gap: 24px;
+  padding: 18px 24px; border-bottom: 2px solid var(--color-text);
+}
+.brand-group { display: flex; align-items: baseline; gap: 14px; }
+.app-brand { font-size: 19px; letter-spacing: 0.02em; text-transform: uppercase; margin-right: 0; }
+.brand-sub {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.overlap-group { display: flex; align-items: center; gap: 10px; }
+.overlap-lbl {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.overlap-tag {
+  padding: 5px 10px; font-size: 12px; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+.body-row { display: flex; align-items: stretch; flex: 1; min-height: 0; }
+
+/* ── left rail ──────────────────────────────────────────────────────── */
+.rail {
+  width: 352px; flex: 0 0 352px; border-right: 2px solid var(--color-text);
+  padding: 24px; display: flex; flex-direction: column; gap: 26px;
+  overflow-y: auto;
+}
+.field-block { display: flex; flex-direction: column; gap: 8px; }
+.lbl {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.rule { height: 2px; background: var(--color-text); flex: none; }
+
+.date-input {
+  width: 100%; padding: 10px 12px; border: 2px solid var(--color-text);
+  background: var(--color-neutral-100); font-size: 15px; font-weight: 600;
+}
+.date-long { font-size: 12px; color: var(--color-neutral-700); }
+
+.weekend-note {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 10px; background: var(--color-accent-200);
+  border-left: 2px solid var(--color-accent);
+}
+.weekend-note-text { font-size: 11px; font-weight: 600; color: var(--color-accent-800); }
+.weekend-btn {
+  flex: 0 0 auto; padding: 5px 8px; border: 2px solid var(--color-accent-800);
+  background: transparent; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-800);
+}
+.weekend-btn:hover {
+  background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent);
+}
+
+.name-input {
+  width: 100%; padding: 9px 12px; border: 2px solid var(--color-text);
+  background: var(--color-neutral-100); font-size: 14px;
+}
+.search-row { display: flex; border: 2px solid var(--color-text); background: var(--color-neutral-100); }
+.search-input {
+  flex: 1; min-width: 0; padding: 9px 12px; border: none;
+  background: transparent; font-size: 14px; outline-offset: -4px;
+}
+.caret-btn {
+  width: 38px; border: none; border-left: 2px solid var(--color-text);
+  background: var(--color-surface); font-size: 12px; font-weight: 800;
+}
+.caret-btn:hover { background: var(--color-accent-200); }
+
+.tz-list {
+  border: 2px solid var(--color-text); border-top: none; max-height: 246px;
+  overflow-y: auto; background: var(--color-neutral-100);
+}
+.tz-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 9px 12px; border-bottom: 1px solid var(--color-neutral-300); cursor: pointer;
+}
+.tz-row:hover { background: var(--color-accent-100); }
+.tz-row-main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tz-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tz-country {
+  font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--color-neutral-600);
+}
+.tz-offset { font-size: 11px; font-weight: 600; color: var(--color-neutral-700); white-space: nowrap; }
+.tz-empty { padding: 12px; font-size: 12px; color: var(--color-neutral-600); }
+
+.people-block { gap: 12px; }
+.people-head { display: flex; align-items: baseline; justify-content: space-between; }
+.count-lbl {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-neutral-600);
+}
+.person {
+  border-top: 1px solid var(--color-neutral-300); padding: 11px 0;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.person-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.person-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.person-name-row { display: flex; align-items: center; gap: 7px; }
+.person-name { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.anchor-badge {
+  padding: 2px 5px; background: var(--color-text); color: var(--color-bg);
+  font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.person-place {
+  font-size: 11px; color: var(--color-neutral-700);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.person-remove {
+  flex: 0 0 auto; width: 26px; height: 26px; border: 2px solid var(--color-text);
+  background: transparent; font-size: 13px; font-weight: 800; line-height: 1;
+}
+.person-remove:hover { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+.person-hours { display: flex; align-items: center; gap: 6px; }
+.works-lbl {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-neutral-600);
+}
+.hour-select {
+  padding: 3px 4px; border: 1px solid var(--color-text);
+  background: var(--color-neutral-100); font-size: 12px; font-weight: 600;
+}
+.to-lbl { font-size: 12px; color: var(--color-neutral-600); }
+.local-now { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--color-neutral-700); }
+.people-empty {
+  border-top: 1px solid var(--color-neutral-300); padding: 14px 0;
+  font-size: 12px; color: var(--color-neutral-600);
+}
+
+/* Settings — the design canvas exposed these through its properties panel;
+   in the running app they become real controls. */
+.settings-group { display: flex; flex-direction: column; gap: 8px; }
+.setting-row { display: flex; align-items: center; gap: 8px; }
+.setting-name { font-size: 12px; color: var(--color-neutral-700); }
+.setting-control { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.num-input {
+  width: 58px; padding: 3px 6px; border: 1px solid var(--color-text);
+  background: var(--color-neutral-100); font-size: 12px; font-weight: 600;
+}
+.check { width: 15px; height: 15px; accent-color: var(--color-accent); cursor: pointer; }
+
+/* ── main panel ─────────────────────────────────────────────────────── */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.toolbar {
+  padding: 16px 24px; border-bottom: 2px solid var(--color-text);
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-height: 64px;
+}
+.sel-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; width: 100%; }
+.sel-block { display: flex; flex-direction: column; gap: 2px; }
+.sel-kicker {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.sel-title { font-size: 16px; font-weight: 800; }
+.sel-summary { display: flex; gap: 10px; flex-wrap: wrap; }
+.sel-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px 10px; border-left: 2px solid var(--color-text);
+}
+.sel-item:hover { border-left-color: var(--color-accent); }
+.sel-time { font-size: 14px; font-weight: 800; }
+.sel-meta {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.clear-btn {
+  margin-left: auto; padding: 7px 12px; border: 2px solid var(--color-text);
+  background: transparent; font-size: 11px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.clear-btn:hover { background: var(--color-text); color: var(--color-bg); }
+.toolbar-hint { font-size: 13px; color: var(--color-neutral-700); }
+
+.grid-area { flex: 1; min-height: 0; overflow: auto; padding: 24px; }
+.grid { border: 2px solid var(--color-text); background: var(--color-bg); }
+.grid-head { display: flex; background: var(--color-text); color: var(--color-bg); }
+.grid-rail-head {
+  flex: 0 0 96px; padding: 9px 10px; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  border-right: 1px solid var(--color-neutral-700);
+}
+.col-head {
+  flex: 1 1 0; min-width: 132px; padding: 8px 10px;
+  border-right: 1px solid var(--color-neutral-700); cursor: pointer;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.col-head:hover { background: var(--color-accent); }
+.col-head-name { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.col-head-place {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-neutral-300); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.grid-row { display: flex; cursor: pointer; position: relative; outline-offset: -2px; }
+.row-label {
+  flex: 0 0 96px; padding: 0 10px; height: 34px; display: flex; align-items: center;
+  justify-content: space-between; gap: 6px;
+  border-right: 1px solid var(--color-text); border-bottom: 1px solid var(--color-neutral-300);
+  font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.row-mark { font-size: 9px; font-weight: 800; letter-spacing: 0.06em; }
+.cell {
+  flex: 1 1 0; min-width: 132px; height: 34px; display: flex; align-items: center;
+  gap: 6px; padding: 0 10px;
+  border-right: 1px solid var(--color-neutral-300); border-bottom: 1px solid var(--color-neutral-300);
+}
+.cell-time { font-size: 13px; font-variant-numeric: tabular-nums; }
+.cell-note {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; opacity: 0.85;
+}
+.grid-empty { padding: 24px; font-size: 13px; color: var(--color-neutral-600); }
+
+.legend { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding-top: 16px; }
+.legend-item { display: flex; align-items: center; gap: 8px; }
+.swatch { width: 16px; height: 16px; border: 1px solid var(--color-text); }
+.legend-lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.legend-lbl.muted { color: var(--color-neutral-700); }
+.legend-note { font-size: 11px; color: var(--color-neutral-600); }
