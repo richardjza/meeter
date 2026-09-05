@@ -89,10 +89,13 @@ Only when you change how the container itself is configured:
 | `docker/nginx.conf` | `docker compose restart` |
 | `compose.yaml` | `docker compose up -d` (recreates the container) |
 | Added a **new file** the page links to | `docker compose up -d` after adding a mount for it |
+| Replaced a mounted file wholesale — a re-rendered `favicon.ico`, say | `docker compose up -d` — a single-file mount follows the file it started with, not a new one written in its place |
 
-That last row is the one real gotcha. Each file is mounted individually, so a
-brand-new file needs a line in `compose.yaml`'s `volumes:` before nginx can see
-it. Editing existing files never needs anything.
+Those last two rows are the real gotcha, and both come from the same thing: each
+file is mounted individually. A brand-new file needs a line in `compose.yaml`'s
+`volumes:` before nginx can see it, and a file *replaced* rather than edited in
+place — how a regenerated icon usually arrives — leaves the container serving the
+one it started with. Editing existing files never needs anything.
 
 ## Everyday commands
 
@@ -156,6 +159,7 @@ so keep it to networks you trust.
 | `Bind for 0.0.0.0:8080 failed: port is already allocated` | Something else has 8080 | Change the port (above), or stop the other process |
 | Page loads but is unstyled | `ds/modernist.css` did not mount | `docker compose down` then `up -d`; check the folder was cloned intact |
 | `404 Not Found` | nginx is running but the file is not mounted | New file? Add it to `volumes:` in `compose.yaml` |
+| Tab icon missing, `404` for `favicon.ico` | The icon files are not mounted, or were replaced since the container started | `docker compose up -d`; `docker compose exec meeter ls /usr/share/nginx/html` shows what nginx can actually see |
 | Edits do not appear | Browser cache, or editing a different clone | `Ctrl+F5`; confirm the folder in `docker compose config` is the one you are editing |
 | Fonts look wrong | The Archivo web font needs internet | Harmless — it falls back to your system font offline |
 | Container keeps restarting | Bad `nginx.conf` | `docker compose logs` shows the parse error and line number |
@@ -166,8 +170,9 @@ Docker was not available in the environment where these files were written, so
 the image has **not** been built and run end-to-end — check that first if
 something misbehaves.
 
-What *was* verified: a document root containing exactly the four files these
-mounts expose (`index.html`, `app.css`, `app.js`, `ds/modernist.css`) serves a
-fully working app, with all 47 end-to-end tests passing against it. So the mount
-list and the `Dockerfile` COPY list are complete and correct — no missing asset,
-no broken relative path.
+What *was* verified: a document root containing exactly the files these mounts
+expose — `index.html`, `app.css`, `app.js`, `favicon.svg`, `favicon.ico`,
+`apple-touch-icon.png` and `ds/modernist.css` — serves a fully working app, with
+the whole end-to-end suite passing against it and every icon fetched by the page
+answering 200. So the mount list and the `Dockerfile` COPY list are complete and
+correct — no missing asset, no broken relative path.

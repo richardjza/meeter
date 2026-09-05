@@ -7,8 +7,7 @@
 FROM nginx:stable-alpine
 
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY index.html app.css app.js /usr/share/nginx/html/
-COPY favicon.svg favicon.ico apple-touch-icon.png /usr/share/nginx/html/
+COPY index.html app.css app.js favicon.svg favicon.ico apple-touch-icon.png /usr/share/nginx/html/
 COPY ds/ /usr/share/nginx/html/ds/
 
 EXPOSE 80
