@@ -152,6 +152,39 @@ docker run -d --name meeter-ghcr -p 8081:80 ghcr.io/richardjza/meeter:latest
 | `latest` | The most recent push to `main` |
 | `sha-<commit>` | One specific commit, by its full 40-character SHA |
 
+### Publish the port, or nothing answers
+
+The `Dockerfile` ends with `EXPOSE 80`. That line is documentation — it records
+which port the app listens on *inside* the container. It publishes nothing. The
+`-p 8080:80` in the command above is what actually maps the container's port 80
+onto <http://localhost:8080>.
+
+This bites hardest in the Docker Desktop UI. Pressing **Run** on an image
+starts the container with **no published port** unless you expand **Optional
+settings** and fill in **Host port** first. The container then shows as running
+and healthy, nginx really is serving inside it, and every address on your
+machine is dead. Set **Host port** to `8080` in that dialog and it works.
+
+Check which one you got with `docker ps` and read the `PORTS` column:
+
+| `PORTS` column | Meaning |
+| --- | --- |
+| `0.0.0.0:8080->80/tcp` | Published — <http://localhost:8080> works |
+| `80/tcp` | Not published — nothing can reach it |
+
+A port mapping is fixed when the container is created, so an unpublished
+container cannot be corrected in place. Remove it and start another:
+
+```powershell
+docker rm -f meeter-ghcr
+docker run -d --name meeter-ghcr -p 8080:80 ghcr.io/richardjza/meeter:latest
+```
+
+Also worth knowing: this image carries the app **inside** it, so a container
+from it has no bind mounts. That is the intended difference from the compose
+setup above, not a misconfiguration — and it is why a code change needs a new
+image rather than just a browser refresh.
+
 Pin to a `sha-` tag when you want a fixed version; `latest` moves under you on
 the next merge. `docker pull ghcr.io/richardjza/meeter:latest` fetches a newer
 `latest` for an image you already have.
@@ -203,6 +236,7 @@ so keep it to networks you trust.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
+| Container runs but nothing answers on any port | Started from the Docker Desktop **Run** button without a **Host port**, so no port is published | `docker ps` shows `80/tcp` and not `0.0.0.0:8080->80/tcp`. Recreate it with `-p 8080:80` — see [Publish the port](#publish-the-port-or-nothing-answers) |
 | `docker: error during connect` | Docker Desktop is not running | Start it, wait for the whale to settle |
 | `Bind for 0.0.0.0:8080 failed: port is already allocated` | Something else has 8080 | Change the port (above), or stop the other process |
 | Page loads but is unstyled | `ds/modernist.css` did not mount | `docker compose down` then `up -d`; check the folder was cloned intact |

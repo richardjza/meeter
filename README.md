@@ -78,6 +78,11 @@ the GitHub Container Registry, so the app can be run without cloning anything:
 docker run -d -p 8080:80 ghcr.io/richardjza/meeter:latest
 ```
 
+The `-p 8080:80` is required, not decorative — the image's `EXPOSE 80` only
+documents the port, it does not publish one. Starting the image from the Docker
+Desktop UI without setting a **Host port** leaves the container running with
+nothing reachable on the host.
+
 `:latest` follows `main`. Each build is additionally tagged with the full
 commit SHA it was built from — `ghcr.io/richardjza/meeter:sha-<commit>` — for
 pinning to a known version. The package is public, so neither needs a login.
