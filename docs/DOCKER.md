@@ -85,7 +85,7 @@ Only when you change how the container itself is configured:
 
 | You changed | What to run |
 | --- | --- |
-| `app.js`, `app.css`, `index.html`, `ds/modernist.css` | Nothing — just refresh |
+| `app.js`, `app.css`, `index.html`, `ds/modernist.css`, the icon files | Nothing — just refresh |
 | `docker/nginx.conf` | `docker compose restart` |
 | `compose.yaml` | `docker compose up -d` (recreates the container) |
 | Added a **new file** the page links to | `docker compose up -d` after adding a mount for it |
@@ -156,6 +156,7 @@ so keep it to networks you trust.
 | `Bind for 0.0.0.0:8080 failed: port is already allocated` | Something else has 8080 | Change the port (above), or stop the other process |
 | Page loads but is unstyled | `ds/modernist.css` did not mount | `docker compose down` then `up -d`; check the folder was cloned intact |
 | `404 Not Found` | nginx is running but the file is not mounted | New file? Add it to `volumes:` in `compose.yaml` |
+| Tab shows a blank or default icon | `favicon.ico` / `favicon.svg` did not mount | `docker compose up -d` to recreate with the current `compose.yaml` |
 | Edits do not appear | Browser cache, or editing a different clone | `Ctrl+F5`; confirm the folder in `docker compose config` is the one you are editing |
 | Fonts look wrong | The Archivo web font needs internet | Harmless — it falls back to your system font offline |
 | Container keeps restarting | Bad `nginx.conf` | `docker compose logs` shows the parse error and line number |
@@ -166,8 +167,9 @@ Docker was not available in the environment where these files were written, so
 the image has **not** been built and run end-to-end — check that first if
 something misbehaves.
 
-What *was* verified: a document root containing exactly the four files these
-mounts expose (`index.html`, `app.css`, `app.js`, `ds/modernist.css`) serves a
-fully working app, with all 47 end-to-end tests passing against it. So the mount
-list and the `Dockerfile` COPY list are complete and correct — no missing asset,
-no broken relative path.
+What *was* verified: a document root containing exactly the files these mounts
+expose (`index.html`, `app.css`, `app.js`, `ds/modernist.css`, plus the
+`favicon.ico`, `favicon.svg` and `apple-touch-icon.png` that `index.html` links
+from its `<head>`) serves a fully working app, with all 47 end-to-end tests
+passing against it. So the mount list and the `Dockerfile` COPY list are
+complete and correct — no missing asset, no broken relative path.
