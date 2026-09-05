@@ -79,11 +79,26 @@ docker compose up -d      # then open http://localhost:8080
 | `app.js` | State, time zone maths, view model and rendering |
 | `app.css` | Layout and component styling |
 | `ds/modernist.css` | Vendored Modernist design system: tokens and base classes |
+| `favicon.svg` | The Meeter mark — source of truth for the icon artwork |
+| `favicon.ico` | The same mark rasterised at 16/32/48 px for browser tabs |
+| `apple-touch-icon.png` | The same mark at 180 px, for iOS home-screen bookmarks |
 | `tests/` | End-to-end test suite and the static server it runs against |
 
 The interface is an implementation of the "Meeting planner across time zones"
 design canvas; `ds/modernist.css` is the design system that canvas was built
 against, vendored here so the app carries its own styling.
+
+### The mark
+
+The favicon is drawn from the same system: flat colour, square corners, the
+ink ground and the single accent red of `ds/modernist.css`. Three staggered
+bars are three participants' working days, offset by time zone; the accent
+band across them is the hour that falls inside all three — the app's own
+answer, reduced to sixteen pixels.
+
+`favicon.svg` is the artwork. The `.ico` and the touch icon are rasterisations
+of it for the places that cannot take an SVG, so a change to the mark starts
+in the SVG and is re-rendered out to the other two.
 
 ## Tests
 
