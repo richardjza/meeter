@@ -203,8 +203,12 @@ input:focus-visible, select:focus-visible, button:focus-visible, div:focus-visib
 .grid { border: 2px solid var(--color-text); background: var(--color-bg); }
 .grid-head { display: flex; background: var(--color-text); color: var(--color-bg); }
 .grid-rail-head {
-  flex: 0 0 96px; padding: 9px 10px; font-size: 9px; font-weight: 800;
-  letter-spacing: 0.12em; text-transform: uppercase;
+  /* The rail head must stay exactly as wide as the hour labels below it, so a
+     long anchor city wraps (hyphenated in app.js) instead of stretching the
+     head and pushing every column out of line with its cells. */
+  flex: 0 0 96px; min-width: 0; padding: 9px 10px; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase; line-height: 1.25;
+  overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto;
   border-right: 1px solid var(--color-neutral-700);
 }
 .col-head {

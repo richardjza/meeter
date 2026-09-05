@@ -284,6 +284,38 @@ try {
   await page.click('.person:nth-child(4) .person-remove');
   ok(await page.textContent('#countLabel') === '3 people', 'removing a participant updates the count');
 
+  await group('Long anchor city');
+  /* A city too long for the 96px hour rail must wrap inside it — if it stretches
+     the rail head instead, every column head slides off its own cells. */
+  await page.fill('#nameInput', 'Richard');
+  await page.fill('#queryInput', 'johannesburg');
+  await page.waitForSelector('.tz-row');
+  await page.click('.tz-row');
+  await page.click('.grid-head .col-head:nth-child(5)');   /* child 1 is the rail head */
+  const rail = await page.textContent('.grid-rail-head');
+  ok(rail.replace(/\u00ad/g, '') === 'Johannesburg', 'the rail head reads the whole city name');
+  ok(rail.includes('\u00ad'), 'a long city name carries hyphenation points');
+  const railBox = await page.evaluate(() => {
+    const head = document.querySelector('.grid-rail-head');
+    const range = document.createRange();
+    range.selectNodeContents(head);
+    return {
+      head: head.getBoundingClientRect().width,
+      label: document.querySelector('.grid-row .row-label').getBoundingClientRect().width,
+      overflow: head.scrollWidth - head.clientWidth,
+      colLeft: document.querySelector('.col-head').getBoundingClientRect().left,
+      cellLeft: document.querySelector('.grid-row .cell').getBoundingClientRect().left,
+      lines: range.getClientRects().length,
+    };
+  });
+  ok(railBox.head === railBox.label, 'the rail head stays as wide as the hour labels below it');
+  ok(railBox.overflow <= 0, 'the city name wraps inside the rail head instead of overflowing');
+  ok(railBox.lines > 1, 'the city name breaks across lines');
+  ok(Math.abs(railBox.colLeft - railBox.cellLeft) < 0.5,
+     'the column heads stay in line with their cells');
+  await page.click('.person:nth-child(4) .person-remove');
+  ok(await page.textContent('#countLabel') === '3 people', 'the long-named participant is removed');
+
   await group('Display settings');
   await page.selectOption('#setTimeFormat', '12-hour');
   ok((await page.textContent('.grid-row:nth-child(2) .row-label span')).includes('am'),
