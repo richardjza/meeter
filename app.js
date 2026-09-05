@@ -179,7 +179,13 @@ function hyphenateWord(w) {
   var pts = breakPoints(w);
   if (!pts.length) return w;   /* no clean split; overflow-wrap handles the rest */
   var out = '', from = 0;
-  pts.forEach(function (i) { out += w.slice(from, i) + SOFT_HYPHEN; from = i; });
+  pts.forEach(function (i) {
+    /* Breaks have to clear each other as well as the ends of the word, or a
+       line can come out as a two-letter scrap between two hyphens. */
+    if (i - from < HYPH_EDGE) return;
+    out += w.slice(from, i) + SOFT_HYPHEN;
+    from = i;
+  });
   return out + w.slice(from);
 }
 

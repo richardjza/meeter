@@ -158,6 +158,21 @@ const setDate = async iso => {
   await page.dispatchEvent('#dateInput', 'change');
 };
 
+/* The lines a reader actually sees in the hour rail head. A wrapped, hyphenated
+   name paints several rects per line — one per run, one for the hyphen — so the
+   rects are grouped back into lines by their top edge. */
+const railHeadLines = () => page.evaluate(() => {
+  const range = document.createRange();
+  range.selectNodeContents(document.querySelector('.grid-rail-head'));
+  const lines = [];
+  for (const r of range.getClientRects()) {
+    const line = lines.find(l => Math.abs(l.top - r.top) < 1);
+    if (line) line.width += r.width;
+    else lines.push({ top: r.top, width: r.width });
+  }
+  return lines;
+});
+
 try {
   await page.goto(server.url, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.grid-row');
@@ -297,24 +312,79 @@ try {
   ok(rail.includes('\u00ad'), 'a long city name carries hyphenation points');
   const railBox = await page.evaluate(() => {
     const head = document.querySelector('.grid-rail-head');
-    const range = document.createRange();
-    range.selectNodeContents(head);
     return {
       head: head.getBoundingClientRect().width,
       label: document.querySelector('.grid-row .row-label').getBoundingClientRect().width,
       overflow: head.scrollWidth - head.clientWidth,
       colLeft: document.querySelector('.col-head').getBoundingClientRect().left,
       cellLeft: document.querySelector('.grid-row .cell').getBoundingClientRect().left,
-      lines: range.getClientRects().length,
     };
   });
   ok(railBox.head === railBox.label, 'the rail head stays as wide as the hour labels below it');
   ok(railBox.overflow <= 0, 'the city name wraps inside the rail head instead of overflowing');
-  ok(railBox.lines > 1, 'the city name breaks across lines');
   ok(Math.abs(railBox.colLeft - railBox.cellLeft) < 0.5,
      'the column heads stay in line with their cells');
+
+  await group('Word wrapping the anchor city');
+  /* Johannesburg has no space to break on, so app.js marks its syllable breaks
+     with soft hyphens: invisible while the name fits, a drawn hyphen once the
+     line runs out. */
+  const marks = await page.evaluate(() => ({
+    long: window.hyphenate('Johannesburg'),
+    cluster: window.hyphenate('Casablanca'),
+    short: window.hyphenate('Bengaluru'),
+    multiWord: window.hyphenate('San Francisco'),
+    stubs: ['Johannesburg', 'Casablanca', 'Copenhagen', 'Antananarivo', 'Charlottetown']
+      .map(c => window.hyphenate(c).split('\u00ad'))
+      .reduce((all, parts) => all.concat(parts), [])
+      .filter(part => part.length < 3),
+  }));
+  ok(marks.long === 'Johan\u00adnes\u00adburg', 'a long name is marked at its syllable breaks');
+  ok(marks.cluster === 'Casa\u00adblanca', 'a break falls before a consonant pair, not through it');
+  ok(marks.short === 'Bengaluru', 'a name that already fits the rail is left unmarked');
+  ok(marks.multiWord === 'San Francisco', 'short words of a multi-word name are left unmarked');
+  ok(marks.stubs.length === 0,
+     'no break leaves a stub of fewer than three letters: ' + JSON.stringify(marks.stubs));
+
+  /* Width of the text as it should read once broken, measured in the rail
+     head's own font: the trailing letter-space of the run is not painted. */
+  const fit = await page.evaluate(() => {
+    const head = document.querySelector('.grid-rail-head');
+    const style = getComputedStyle(head);
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;white-space:pre;visibility:hidden';
+    probe.style.font = style.font;
+    probe.style.letterSpacing = style.letterSpacing;
+    probe.style.textTransform = style.textTransform;
+    document.body.appendChild(probe);
+    const width = text => {
+      probe.textContent = text;
+      return probe.getBoundingClientRect().width - parseFloat(style.letterSpacing);
+    };
+    const out = { hyphenated: width('Johannes-'), unbroken: width('Johannesb'),
+                  content: head.clientWidth - parseFloat(style.paddingLeft) -
+                           parseFloat(style.paddingRight) };
+    probe.remove();
+    return out;
+  });
+  const wrapped = await railHeadLines();
+  ok(wrapped.length === 2, 'the anchor city wraps onto two lines: ' + wrapped.length);
+  ok(wrapped.every(l => l.width <= fit.content + 0.5),
+     'every line fits inside the rail head: ' + JSON.stringify(wrapped.map(l => l.width)));
+  ok(Math.abs(wrapped[0].width - fit.hyphenated) < 1,
+     'the first line reads JOHANNES- with the hyphen drawn, not a mid-word cut');
+  ok(Math.abs(wrapped[0].width - fit.unbroken) > 1,
+     'the break is the marked one, not wherever the word happened to run out');
+
   await page.click('.person:nth-child(4) .person-remove');
   ok(await page.textContent('#countLabel') === '3 people', 'the long-named participant is removed');
+
+  /* Removing the anchor hands the rail back to San Francisco: two short words,
+     which need the space to break on and no hyphen at all. */
+  const spaced = await page.textContent('.grid-rail-head');
+  ok(!spaced.includes('\u00ad'), 'a name of short words carries no hyphenation marks: ' + spaced);
+  ok((await railHeadLines()).every(l => l.width <= fit.content + 0.5),
+     'a name of short words breaks at its space to fit the rail head');
 
   await group('Display settings');
   await page.selectOption('#setTimeFormat', '12-hour');
