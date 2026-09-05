@@ -141,6 +141,52 @@ function esc(s) {
   });
 }
 
+/* Soft hyphens (U+00AD) stay invisible until the browser needs the break, so a
+   name like Johannesburg reads whole in a wide box and as “Johannes-burg” in the
+   96px hour rail head. CSS hyphens:auto only fires where the engine ships a
+   hyphenation dictionary, so these marks put the break points in by hand and
+   let the browser pick the one that fills the line. */
+var SOFT_HYPHEN = '\u00ad';
+var HYPH_MIN = 10;   /* shorter words already fit the rail head unbroken */
+var HYPH_EDGE = 3;   /* never leave a stub of fewer than three letters */
+/* Consonant pairs that open a syllable together, so a break goes before the
+   pair (Casa-blanca) rather than through it (Casab-lanca). */
+var ONSETS = ['bl','br','ch','cl','cr','dr','fl','fr','gl','gr','ph','pl','pr',
+              'sh','sk','sl','sm','sn','sp','st','sw','th','tr','tw','wh','wr'];
+
+function isVowel(c) { return !!c && 'aeiouy'.indexOf(c.toLowerCase()) >= 0; }
+function isConsonant(c) { return !!c && /[a-z]/i.test(c) && !isVowel(c); }
+
+/* Break points by the plain syllable rules: between two consonants that run
+   into a vowel, and before a single consonant or an inseparable pair. */
+function breakPoints(w) {
+  var out = [];
+  for (var i = HYPH_EDGE; i <= w.length - HYPH_EDGE; i++) {
+    var prev = w[i - 1], cur = w[i], next = w[i + 1];
+    if (isConsonant(prev) && isConsonant(cur) && isVowel(next) &&
+        /[aeiouy]/i.test(w.slice(0, i - 1)) &&
+        ONSETS.indexOf((prev + cur).toLowerCase()) < 0) { out.push(i); continue; }
+    if (!isVowel(prev) || !isConsonant(cur)) continue;
+    if (isVowel(next)) { out.push(i); continue; }
+    if (isConsonant(next) && isVowel(w[i + 2]) &&
+        ONSETS.indexOf((cur + next).toLowerCase()) >= 0) out.push(i);
+  }
+  return out;
+}
+
+function hyphenateWord(w) {
+  if (w.length < HYPH_MIN) return w;
+  var pts = breakPoints(w);
+  if (!pts.length) return w;   /* no clean split; overflow-wrap handles the rest */
+  var out = '', from = 0;
+  pts.forEach(function (i) { out += w.slice(from, i) + SOFT_HYPHEN; from = i; });
+  return out + w.slice(from);
+}
+
+function hyphenate(s) {
+  return String(s).split(' ').map(hyphenateWord).join(' ');
+}
+
 /* ── state ─────────────────────────────────────────────────────────── */
 
 function initState() {
@@ -481,7 +527,7 @@ function renderGrid(v) {
   setHTML(el.gridWrap,
     '<div class="grid" style="min-width:' + v.gridMinWidth + '">' +
       '<div class="grid-head">' +
-        '<div class="grid-rail-head">' + esc(v.anchorRailLabel) + '</div>' + heads +
+        '<div class="grid-rail-head">' + esc(hyphenate(v.anchorRailLabel)) + '</div>' + heads +
       '</div>' + body +
     '</div>');
 }
