@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Meeter">
+  <!-- Meeter's mark, drawn in the Modernist system: flat colour, square
+       corners, ink ground (--color-text) and one accent band (--color-accent).
+       Three staggered bars are three participants' working days, offset by
+       time zone; the band is the hour that lands inside all of them. -->
+  <rect width="32" height="32" fill="#201e1d"/>
+  <g fill="#d7d3d3">
+    <rect x="2" y="2" width="8" height="22"/>
+    <rect x="12" y="6" width="8" height="24"/>
+    <rect x="22" y="4" width="8" height="24"/>
+  </g>
+  <rect y="12" width="32" height="8" fill="#ec3013"/>
+</svg>
