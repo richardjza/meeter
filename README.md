@@ -114,6 +114,31 @@ npx playwright show-trace test-results/trace.zip
 
 CI uploads the same folder as a downloadable artifact when a run goes red, so
 a CI-only failure can be diagnosed without reproducing it locally.
+### Screenshots and video
+
+A plain `npm test` writes nothing. Pass a capture flag to have the run leave
+behind a visual record — useful for seeing what the page actually looked like
+when something failed, or for grabbing current screenshots of the interface:
+
+```sh
+npm test -- --screenshots        # one full-page screenshot per test group
+npm test -- --video              # a recording of the whole run
+npm test -- --capture            # both
+npm run test:capture             # shorthand for --capture
+```
+
+Files land under `test-artifacts/` (git-ignored), as
+`test-artifacts/screenshots/NN-group-name.png` and
+`test-artifacts/video/run.webm`. Screenshots are taken as each group finishes,
+so they show the state its interactions left the page in; a group with a
+failing assertion is named `...-failed.png`, and a run that aborts gets a final
+frame of wherever it stopped. Point the output somewhere else with
+`--out-dir=some/dir`.
+
+The same switches are readable from the environment — `MEETER_SCREENSHOTS`,
+`MEETER_VIDEO`, `MEETER_CAPTURE` and `MEETER_OUT_DIR` — for CI or a shell
+alias. Each directory is cleared at the start of a capturing run, so what you
+find in it is always from the run that just happened.
 
 ## Contributing
 

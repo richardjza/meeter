@@ -6,9 +6,10 @@
   "license": "Apache-2.0",
   "scripts": {
     "test": "node tests/app.test.mjs",
+    "test:capture": "node tests/app.test.mjs --capture",
     "start": "node -e \"import('./tests/server.mjs').then(async m => { const s = await m.startServer('.'); console.log('Meeter running at ' + s.url); })\""
   },
   "devDependencies": {
-    "playwright": "^1.56.0"
+    "playwright": "^1.63.0"
   }
 }
