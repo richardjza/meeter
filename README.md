@@ -80,9 +80,8 @@ docker run -d -p 8080:80 ghcr.io/richardjza/meeter:latest
 
 `:latest` follows `main`. Each build is additionally tagged with the full
 commit SHA it was built from — `ghcr.io/richardjza/meeter:sha-<commit>` — for
-pinning to a known version. See
-[docs/DOCKER.md](docs/DOCKER.md#the-published-image) for the details, including
-the one-time step that makes the package publicly pullable.
+pinning to a known version. The package is public, so neither needs a login.
+See [docs/DOCKER.md](docs/DOCKER.md#the-published-image) for the details.
 
 ## Layout
 

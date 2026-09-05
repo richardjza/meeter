@@ -161,12 +161,16 @@ smoke-testing — only pushes to `main` publish. So a Dockerfile or nginx change
 that breaks the image is caught on the pull request rather than in the
 registry.
 
-### Making the package pullable without a login
+### Package visibility
 
-The first publish creates the package as **private**, whatever the visibility
-of the repository. Until that is changed, `docker pull` needs a GitHub token
-with `read:packages`, and an anonymous pull returns a confusing
-`denied` / `not found`. To make it public, once, as the repository owner:
+The package is **public**: the first publish inherited the visibility of this
+repository, so `docker pull` works with no login and no token. Verified against
+the registry — an anonymous request for both `latest` and the `sha-` tag
+returns the manifest the workflow pushed.
+
+If a pull ever comes back `denied` or `not found` for someone without
+credentials, the package has been made private. Change it back, as the
+repository owner:
 
 **Your profile → Packages → `meeter` → Package settings → Danger Zone →
 Change visibility → Public.**
