@@ -1,0 +1,7 @@
+# Every path is owned by the repository owner. GitHub uses this to request a
+# review automatically on any pull request, including ones opened from forks.
+#
+# Note: do not turn on "Require review from Code Owners" in a branch ruleset
+# while this is a solo project — GitHub will not let you approve your own pull
+# request, so the rule would make your own branches unmergeable.
+* @richardjza

@@ -1,0 +1,18 @@
+# Keeps the two things this repository actually depends on current: the npm
+# dev-dependencies used by the test suite, and the GitHub Actions pinned by
+# commit SHA in the workflows. Pinning to a SHA is what makes the second entry
+# necessary — without it the actions would never move.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

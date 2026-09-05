@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Meeter renders participant names into markup, so the escaping in app.js is
+     the first line of defence and this is the second: even if something slipped
+     through, the browser will not run it. Scripts and styles may only come from
+     this origin; the font is the single third-party exception. 'unsafe-inline'
+     is needed for style because the grid sets colours through style attributes,
+     which cannot introduce script. frame-ancestors is only honoured as a real
+     header, so it lives in docker/nginx.conf instead. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Meeter — Meeting Planner</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="ds/modernist.css">
