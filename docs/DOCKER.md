@@ -136,6 +136,53 @@ This is the opposite trade: self-contained, but **every code change needs a
 rebuild** (`docker build` again, then recreate the container). Use `compose` for
 development and the image only when you need portability.
 
+## The published image
+
+You do not have to build that image yourself. `.github/workflows/publish.yml`
+builds the `Dockerfile` on every push to `main` and pushes the result to the
+GitHub Container Registry, so the current state of `main` is always available
+as a pull:
+
+```powershell
+docker run -d --name meeter-ghcr -p 8081:80 ghcr.io/richardjza/meeter:latest
+```
+
+| Tag | What it points at |
+| --- | --- |
+| `latest` | The most recent push to `main` |
+| `sha-<commit>` | One specific commit, by its full 40-character SHA |
+
+Pin to a `sha-` tag when you want a fixed version; `latest` moves under you on
+the next merge. `docker pull ghcr.io/richardjza/meeter:latest` fetches a newer
+`latest` for an image you already have.
+
+Pull requests run the same workflow, but they stop after building and
+smoke-testing — only pushes to `main` publish. So a Dockerfile or nginx change
+that breaks the image is caught on the pull request rather than in the
+registry.
+
+### Making the package pullable without a login
+
+The first publish creates the package as **private**, whatever the visibility
+of the repository. Until that is changed, `docker pull` needs a GitHub token
+with `read:packages`, and an anonymous pull returns a confusing
+`denied` / `not found`. To make it public, once, as the repository owner:
+
+**Your profile → Packages → `meeter` → Package settings → Danger Zone →
+Change visibility → Public.**
+
+The same page has **Manage Actions access**, where the `meeter` repository
+should keep `Write` — that is what lets the workflow push. It is granted
+automatically for a package first published by that repository's own workflow.
+
+### If the push step fails
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `denied: permission_denied` on push | The workflow token cannot write packages | Check `permissions: packages: write` is still in the workflow, and that **Settings → Actions → General → Workflow permissions** is not set to read-only |
+| `denied: installation not allowed to Create ... package` | The package exists but is no longer linked to this repository | Package settings → Manage Actions access → add `meeter` with `Write` |
+| The build step is red but nothing was pushed | The smoke test found a missing file | Read the step log: it prints one status code per URL, then the container's nginx log |
+
 ## Optional — open it from your phone
 
 On the same Wi-Fi, find your laptop's IP:
@@ -163,12 +210,18 @@ so keep it to networks you trust.
 
 ## How this was verified
 
-Docker was not available in the environment where these files were written, so
-the image has **not** been built and run end-to-end — check that first if
-something misbehaves.
+The `Dockerfile` is built and exercised on every push and pull request by
+`.github/workflows/publish.yml`: the workflow starts a container from the image
+it just built and requests each file `index.html` links to, failing the run on
+anything that is not a `200`. So the image path is covered by CI.
 
-What *was* verified: a document root containing exactly the files these mounts
-expose (`index.html`, `app.css`, `app.js`, `ds/modernist.css`, plus the
+The **compose** path is not. Docker was not available in the environment where
+these files were written, and the bind-mount setup is specific to Docker
+Desktop on Windows, so it has not been run end-to-end — check that first if
+something misbehaves there.
+
+What *was* verified locally: a document root containing exactly the files these
+mounts expose (`index.html`, `app.css`, `app.js`, `ds/modernist.css`, plus the
 `favicon.ico`, `favicon.svg` and `apple-touch-icon.png` that `index.html` links
 from its `<head>`) serves a fully working app, with all 47 end-to-end tests
 passing against it. So the mount list and the `Dockerfile` COPY list are
