@@ -104,6 +104,17 @@ not find it, point at it with `CHROMIUM_PATH=/path/to/chrome npm test`.
 The suite starts its own static server on an ephemeral port, so nothing needs
 to be running beforehand.
 
+A failing run writes diagnostics to `test-results/`: a screenshot of the page
+as the run left it, and a Playwright trace carrying a screenshot and DOM
+snapshot for every action. Replay the trace with:
+
+```sh
+npx playwright show-trace test-results/trace.zip
+```
+
+CI uploads the same folder as a downloadable artifact when a run goes red, so
+a CI-only failure can be diagnosed without reproducing it locally.
+
 ## Contributing
 
 Ideas and feedback are welcome while the shape of the project is still being
