@@ -1,4 +1,4 @@
-# Only the four static files and the nginx config belong in the image.
+# Only the static files the app serves and the nginx config belong in the image.
 .git
 .github
 node_modules
