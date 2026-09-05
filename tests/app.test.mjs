@@ -104,6 +104,45 @@ try {
   ok((await page.$$('.sel-item')).length === 3, 'summarises the slot for every participant');
   ok((await page.textContent('.sel-item .sel-time')) === '09:00', 'anchor sees their own local hour');
 
+  group('Highlighting picked rows');
+  /* The picked row paints its cells in the accent orange; comparing against
+     the resolved token keeps the check honest if the palette moves. */
+  const shade = async selector => page.evaluate(sel => {
+    const probe = document.createElement('div');
+    probe.style.background =
+      getComputedStyle(document.documentElement).getPropertyValue('--color-accent-400').trim();
+    document.body.appendChild(probe);
+    const orange = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return [getComputedStyle(document.querySelector(sel)).backgroundColor, orange];
+  }, selector);
+
+  let [picked, orange] = await shade('.grid-row:nth-child(11) .cell');
+  ok(picked === orange, 'a picked row paints its cells in the accent orange');
+  let [unpicked] = await shade('.grid-row:nth-child(12) .cell');
+  ok(unpicked !== orange, 'an unpicked row keeps its own cell colours');
+  ok(await page.getAttribute('.grid-row:nth-child(11)', 'aria-pressed') === 'true',
+     'the picked row reports itself pressed');
+
+  await page.click('.grid-row:nth-child(12)');
+  ok((await page.$$('.grid-row[aria-pressed="true"]')).length === 2,
+     'a second click picks another row without dropping the first');
+  [picked] = await shade('.grid-row:nth-child(12) .cell');
+  ok(picked === orange, 'the second picked row is orange too');
+  ok(await page.textContent('.sel-kicker') === 'Proposed slots', 'the toolbar reads several slots');
+  ok((await page.$$('.sel-item')).length === 2, 'the toolbar summarises one item per picked slot');
+  ok((await page.textContent('.sel-title')).startsWith('2 hours'), 'the toolbar counts the picks');
+
+  await page.click('.grid-row:nth-child(12)');
+  ok((await page.$$('.grid-row[aria-pressed="true"]')).length === 1,
+     'clicking a picked row again drops just that row');
+  [unpicked] = await shade('.grid-row:nth-child(12) .cell');
+  ok(unpicked !== orange, 'the dropped row loses its highlight');
+  ok(await page.textContent('.sel-kicker') === 'Proposed slot',
+     'the toolbar returns to the single-slot summary');
+  ok(await page.getAttribute('.grid-row:nth-child(11)', 'aria-pressed') === 'true',
+     'the row that was not clicked stays picked');
+
   group('Re-anchoring');
   await page.click('.grid-head .col-head:nth-child(3)');   /* child 1 is the rail head */
   ok((await page.textContent('#dateLong')).includes('anchored to Priya'), 're-anchors to the clicked person');
