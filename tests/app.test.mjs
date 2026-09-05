@@ -23,6 +23,9 @@ import { startServer } from './server.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+/* Diagnostics for a failed run. Written only on failure, and picked up as a
+   CI artifact — a red run should not need reproducing locally to understand. */
+const RESULTS = path.join(ROOT, 'test-results');
 /* ---- Capture options ---------------------------------------------------- */
 
 const argv = process.argv.slice(2);
@@ -137,6 +140,11 @@ const context = await browser.newContext({
    font request may have to time out first in a sandboxed environment. */
 context.setDefaultTimeout(5000);
 context.setDefaultNavigationTimeout(30000);
+/* Recorded for the whole run but kept only when something fails. The trace
+   carries a screenshot and a DOM snapshot per action, so the failing moment
+   can be replayed rather than guessed at. */
+await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+
 const page = await context.newPage();
 
 const pageErrors = [];
@@ -345,6 +353,7 @@ try {
   await capture((openGroup || 'run') + ' aborted', { failed: true });
   openGroup = null;
 } finally {
+
   /* The recording is only written out when the context closes, and its path
      has to be read while the page is still alive. */
   let videoPath = null;
@@ -356,6 +365,7 @@ try {
     }
   }
   await context.close();
+  await saveDiagnostics(failures.length > 0);
   await browser.close();
   await server.close();
 
@@ -374,6 +384,26 @@ try {
                 ' written to ' + report(shotDir));
   }
   if (videoPath) console.log('Video written to ' + report(videoPath));
+}
+
+async function saveDiagnostics(failed) {
+  /* Diagnostics must never mask the result they describe, so every step here
+     is best-effort: a browser that died mid-run cannot be screenshotted. */
+  try {
+    if (!failed) {
+      await context.tracing.stop();
+      return;
+    }
+    await mkdir(RESULTS, { recursive: true });
+    await page.screenshot({ path: path.join(RESULTS, 'final-state.png'), fullPage: true })
+      .catch(e => console.log('  (could not capture a screenshot: ' + e.message.split('\n')[0] + ')'));
+    await context.tracing.stop({ path: path.join(RESULTS, 'trace.zip') });
+    console.log('\nDiagnostics written to test-results/');
+    console.log('  final-state.png  the page as the run left it');
+    console.log('  trace.zip        replay with: npx playwright show-trace test-results/trace.zip');
+  } catch (e) {
+    console.log('  (diagnostics unavailable: ' + String(e).split('\n')[0] + ')');
+  }
 }
 
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
