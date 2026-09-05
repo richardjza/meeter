@@ -466,8 +466,11 @@ try {
       console.log('\n  ! no video for this run: ' + err.message.split('\n')[0]);
     }
   }
-  await context.close();
+  /* Diagnostics come off a live context: the screenshot needs the page, and the
+     trace is only written out while tracing is still running. Closing first
+     threw both away — and the failing run is exactly when they are wanted. */
   await saveDiagnostics(failures.length > 0);
+  await context.close();
   await browser.close();
   await server.close();
 
