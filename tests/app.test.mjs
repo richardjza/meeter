@@ -2,14 +2,65 @@
    Drives the real page in Chromium: no mocks, no test doubles.
 
    The browser's time zone is pinned to America/Los_Angeles and every date
-   is fixed, so the expected times and day boundaries are deterministic. */
+   is fixed, so the expected times and day boundaries are deterministic.
+
+   Screenshots and video are off by default, so the usual run stays fast and
+   writes nothing. Turn them on for a manual run:
+
+     npm test -- --screenshots        one screenshot per test group
+     npm test -- --video              a recording of the whole run
+     npm test -- --capture            both
+     npm test -- --out-dir=some/dir   where they land (default test-artifacts)
+
+   MEETER_SCREENSHOTS, MEETER_VIDEO, MEETER_CAPTURE and MEETER_OUT_DIR do the
+   same from the environment, for CI or a shell alias. */
 
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
+import { mkdir, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { startServer } from './server.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+/* ---- Capture options ---------------------------------------------------- */
+
+const argv = process.argv.slice(2);
+
+/* An environment variable counts as set unless it is explicitly empty, 0 or
+   false, so MEETER_VIDEO=0 reads the way anyone would expect it to. */
+const envOn = name => {
+  const value = process.env['MEETER_' + name];
+  return value !== undefined && !/^(|0|false)$/i.test(value.trim());
+};
+const enabled = (flag, name) => argv.includes('--' + flag) || envOn(name);
+
+const readOption = (flag, fallback) => {
+  const i = argv.findIndex(a => a === '--' + flag || a.startsWith('--' + flag + '='));
+  if (i === -1) return fallback;
+  const arg = argv[i];
+  return arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : (argv[i + 1] || fallback);
+};
+
+const captureAll = enabled('capture', 'CAPTURE');
+const wantScreenshots = captureAll || enabled('screenshots', 'SCREENSHOTS');
+const wantVideo = captureAll || enabled('video', 'VIDEO');
+
+const outDir = path.resolve(
+  ROOT, readOption('out-dir', process.env.MEETER_OUT_DIR || 'test-artifacts'));
+const shotDir = path.join(outDir, 'screenshots');
+const videoDir = path.join(outDir, 'video');
+
+/* Clear only the two directories this run writes, never the parent: an
+   --out-dir pointing somewhere unexpected should not take anything with it. */
+if (wantScreenshots) {
+  await rm(shotDir, { recursive: true, force: true });
+  await mkdir(shotDir, { recursive: true });
+}
+if (wantVideo) {
+  await rm(videoDir, { recursive: true, force: true });
+  await mkdir(videoDir, { recursive: true });
+}
 
 let passed = 0;
 const failures = [];
@@ -24,7 +75,45 @@ function ok(condition, message) {
   }
 }
 
-function group(name) {
+/* Each group leaves the page in a state worth looking at, so a screenshot is
+   taken as the group closes — when the next one opens, or at the end of the
+   run. A group with a failing assertion is marked in the file name. */
+let shotIndex = 0;
+let openGroup = null;
+let failuresAtGroupStart = 0;
+
+const slug = name => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/* Paths inside the repository read better relative; anywhere else, an
+   --out-dir pointing outside it is clearer written out in full. */
+const report = target => {
+  const rel = path.relative(ROOT, target);
+  return rel.startsWith('..') ? target : rel;
+};
+
+async function capture(name, { failed = false } = {}) {
+  if (!wantScreenshots) return;
+  const file = path.join(
+    shotDir,
+    String(++shotIndex).padStart(2, '0') + '-' + slug(name) + (failed ? '-failed' : '') + '.png');
+  try {
+    await page.screenshot({ path: file, fullPage: true });
+  } catch (err) {
+    console.log('  ! no screenshot for "' + name + '": ' + err.message.split('\n')[0]);
+  }
+}
+
+async function closeGroup() {
+  if (openGroup === null) return;
+  const name = openGroup;
+  openGroup = null;
+  await capture(name, { failed: failures.length > failuresAtGroupStart });
+}
+
+async function group(name) {
+  await closeGroup();
+  openGroup = name;
+  failuresAtGroupStart = failures.length;
   console.log('\n' + name);
 }
 
@@ -39,7 +128,10 @@ const browser = await chromium.launch({
 });
 const context = await browser.newContext({
   timezoneId: 'America/Los_Angeles',
-  viewport: { width: 1440, height: 940 }
+  viewport: { width: 1440, height: 940 },
+  ...(wantVideo
+    ? { recordVideo: { dir: videoDir, size: { width: 1440, height: 940 } } }
+    : {})
 });
 /* Actions should fail fast; navigation gets longer, since the page's web
    font request may have to time out first in a sandboxed environment. */
@@ -62,7 +154,7 @@ try {
   await page.goto(server.url, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.grid-row');
 
-  group('Seeding');
+  await group('Seeding');
   ok(pageErrors.length === 0, 'loads with no page errors: ' + JSON.stringify(pageErrors));
   const names = await page.$$eval('.person-name', els => els.map(e => e.textContent));
   ok(JSON.stringify(names) === '["You","Priya","Kenji"]', 'seeds You / Priya / Kenji');
@@ -70,19 +162,19 @@ try {
      'resolves the browser time zone to a known city');
   ok(await page.textContent('.anchor-badge') === 'Anchor', 'anchors the first participant');
 
-  group('Date handling');
+  await group('Date handling');
   await setDate('2026-09-02');
   ok((await page.textContent('#dateLong')).startsWith('Wednesday, September 2, 2026'),
      'renders the long date');
   ok((await page.textContent('#dateLong')).includes('anchored to You'),
      'names the anchor in the date line');
 
-  group('Grid shape');
+  await group('Grid shape');
   ok((await page.$$('.grid-row')).length === 24, 'renders 24 hour rows');
   ok((await page.$$('.grid-head .col-head')).length === 3, 'renders one column head per person');
   ok((await page.$$('.grid-row:nth-child(2) .cell')).length === 3, 'renders one cell per person per row');
 
-  group('Overlap maths');
+  await group('Overlap maths');
   ok(await page.textContent('#overlapTag') === 'No shared hours',
      'San Francisco / Bengaluru / Tokyo at 09-17 genuinely never overlap');
   const notes = await page.$$eval('.cell-note', els => els.map(e => e.textContent.trim()));
@@ -95,7 +187,7 @@ try {
   await page.fill('#setWorkStart', '9');
   await page.fill('#setWorkEnd', '17');
 
-  group('Selecting a slot');
+  await group('Selecting a slot');
   /* Child 1 of the grid is the header row, so hour 09 is child 11. */
   await page.click('.grid-row:nth-child(11)');
   ok(await page.textContent('.sel-kicker') === 'Proposed slot', 'clicking an hour proposes a slot');
@@ -104,7 +196,7 @@ try {
   ok((await page.$$('.sel-item')).length === 3, 'summarises the slot for every participant');
   ok((await page.textContent('.sel-item .sel-time')) === '09:00', 'anchor sees their own local hour');
 
-  group('Re-anchoring');
+  await group('Re-anchoring');
   await page.click('.grid-head .col-head:nth-child(3)');   /* child 1 is the rail head */
   ok((await page.textContent('#dateLong')).includes('anchored to Priya'), 're-anchors to the clicked person');
   ok(await page.textContent('.grid-rail-head') === 'Bengaluru', 'the hour rail follows the anchor');
@@ -112,7 +204,7 @@ try {
   ok((await page.textContent('.toolbar-hint')).includes('Click any hour row'),
      'clearing restores the instruction line');
 
-  group('Search and participants');
+  await group('Search and participants');
   await page.fill('#queryInput', 'berlin');
   await page.waitForSelector('.tz-row');
   /* Munich sits in Europe/Berlin, so matching on zone name is correct. */
@@ -133,7 +225,7 @@ try {
   await page.fill('#queryInput', '');
   await page.click('#caretBtn');
 
-  group('Per-person working hours');
+  await group('Per-person working hours');
   await page.selectOption('.person:nth-child(4) [data-hours="ws"]', '0');
   await page.selectOption('.person:nth-child(4) [data-hours="we"]', '24');
   ok(await page.$eval('.person:nth-child(4) [data-hours="ws"]', e => e.value) === '0',
@@ -145,7 +237,7 @@ try {
   await page.click('.person:nth-child(4) .person-remove');
   ok(await page.textContent('#countLabel') === '3 people', 'removing a participant updates the count');
 
-  group('Display settings');
+  await group('Display settings');
   await page.selectOption('#setTimeFormat', '12-hour');
   ok((await page.textContent('.grid-row:nth-child(2) .row-label span')).includes('am'),
      'switches to 12-hour labels');
@@ -158,7 +250,7 @@ try {
      'the trimmed range starts at 06:00');
   await page.selectOption('#setHourRange', 'Full 24 hours');
 
-  group('Clicking straight after editing a setting');
+  await group('Clicking straight after editing a setting');
   /* A settings field losing focus must not rebuild the grid, or the click
      that caused the blur lands on a replaced node and is swallowed. */
   await page.fill('#setWorkStart', '8');
@@ -168,7 +260,7 @@ try {
   await page.click('#clearSelBtn');
   await page.fill('#setWorkStart', '9');
 
-  group('Weekends');
+  await group('Weekends');
   await setDate('2026-09-05');                 /* Saturday */
   ok((await page.textContent('.weekend-note-text')).includes('Weekend'), 'flags a weekend date');
   ok(await page.textContent('#overlapTag') === 'Weekend — no working hours',
@@ -182,7 +274,7 @@ try {
   ok(await page.$('.weekend-note') === null, 'treating weekends as working hides the notice');
   await page.check('#setWeekendsOff');
 
-  group('Escaping');
+  await group('Escaping');
   await setDate('2026-09-02');
   await page.fill('#nameInput', '<img src=x onerror=alert(1)>');
   await page.fill('#queryInput', 'oslo');
@@ -190,7 +282,7 @@ try {
   ok((await page.$$('.person img')).length === 0, 'a participant name is escaped, not parsed as HTML');
   await page.click('.person:nth-child(4) .person-remove');
 
-  group('Empty state');
+  await group('Empty state');
   for (let i = 0; i < 3; i++) await page.click('.person:nth-child(1) .person-remove');
   ok((await page.textContent('.people-empty')).includes('No participants yet'),
      'prompts for a first participant');
@@ -202,16 +294,47 @@ try {
   ok(await page.textContent('.anchor-badge') === 'Anchor',
      'the first participant added after emptying becomes the anchor');
 
-  group('Overall');
+  await group('Overall');
   ok(pageErrors.length === 0, 'no page errors across the whole run: ' + JSON.stringify(pageErrors));
+  await closeGroup();
 } catch (err) {
   /* Report the abort as a failure so the summary below is still printed;
      a timeout here means the page stopped responding as expected. */
   console.log('\n  ✗ the run aborted: ' + (err && err.message ? err.message.split('\n')[0] : err));
   failures.push('the run aborted before completing');
+  /* The last thing the page did is the most useful frame there is. */
+  await capture((openGroup || 'run') + ' aborted', { failed: true });
+  openGroup = null;
 } finally {
+  /* The recording is only written out when the context closes, and its path
+     has to be read while the page is still alive. */
+  let videoPath = null;
+  if (wantVideo) {
+    try {
+      videoPath = await page.video().path();
+    } catch (err) {
+      console.log('\n  ! no video for this run: ' + err.message.split('\n')[0]);
+    }
+  }
+  await context.close();
   await browser.close();
   await server.close();
+
+  if (videoPath) {
+    /* Playwright names the file after an internal id; give it a name someone
+       reading the directory can make sense of. */
+    const named = path.join(videoDir, 'run.webm');
+    try {
+      if (path.resolve(videoPath) !== named) await rename(videoPath, named);
+      videoPath = named;
+    } catch { /* keep the generated name if the rename is not possible */ }
+  }
+
+  if (wantScreenshots && shotIndex) {
+    console.log('\n' + shotIndex + ' screenshot' + (shotIndex === 1 ? '' : 's') +
+                ' written to ' + report(shotDir));
+  }
+  if (videoPath) console.log('Video written to ' + report(videoPath));
 }
 
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
