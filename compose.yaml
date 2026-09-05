@@ -21,5 +21,8 @@ services:
       - ./index.html:/usr/share/nginx/html/index.html:ro
       - ./app.css:/usr/share/nginx/html/app.css:ro
       - ./app.js:/usr/share/nginx/html/app.js:ro
+      - ./favicon.ico:/usr/share/nginx/html/favicon.ico:ro
+      - ./favicon.svg:/usr/share/nginx/html/favicon.svg:ro
+      - ./apple-touch-icon.png:/usr/share/nginx/html/apple-touch-icon.png:ro
       - ./ds:/usr/share/nginx/html/ds:ro
     restart: unless-stopped
