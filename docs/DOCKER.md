@@ -152,6 +152,39 @@ docker run -d --name meeter-ghcr -p 8081:80 ghcr.io/richardjza/meeter:latest
 | `latest` | The most recent push to `main` |
 | `sha-<commit>` | One specific commit, by its full 40-character SHA |
 
+### Publish the port, or nothing answers
+
+The `Dockerfile` ends with `EXPOSE 80`. That line is documentation — it records
+which port the app listens on *inside* the container. It publishes nothing. The
+`-p 8080:80` in the command above is what actually maps the container's port 80
+onto <http://localhost:8080>.
+
+This bites hardest in the Docker Desktop UI. Pressing **Run** on an image
+starts the container with **no published port** unless you expand **Optional
+settings** and fill in **Host port** first. The container then shows as running
+and healthy, nginx really is serving inside it, and every address on your
+machine is dead. Set **Host port** to `8080` in that dialog and it works.
+
+Check which one you got with `docker ps` and read the `PORTS` column:
+
+| `PORTS` column | Meaning |
+| --- | --- |
+| `0.0.0.0:8080->80/tcp` | Published — <http://localhost:8080> works |
+| `80/tcp` | Not published — nothing can reach it |
+
+A port mapping is fixed when the container is created, so an unpublished
+container cannot be corrected in place. Remove it and start another:
+
+```powershell
+docker rm -f meeter-ghcr
+docker run -d --name meeter-ghcr -p 8080:80 ghcr.io/richardjza/meeter:latest
+```
+
+Also worth knowing: this image carries the app **inside** it, so a container
+from it has no bind mounts. That is the intended difference from the compose
+setup above, not a misconfiguration — and it is why a code change needs a new
+image rather than just a browser refresh.
+
 Pin to a `sha-` tag when you want a fixed version; `latest` moves under you on
 the next merge. `docker pull ghcr.io/richardjza/meeter:latest` fetches a newer
 `latest` for an image you already have.
@@ -161,12 +194,16 @@ smoke-testing — only pushes to `main` publish. So a Dockerfile or nginx change
 that breaks the image is caught on the pull request rather than in the
 registry.
 
-### Making the package pullable without a login
+### Package visibility
 
-The first publish creates the package as **private**, whatever the visibility
-of the repository. Until that is changed, `docker pull` needs a GitHub token
-with `read:packages`, and an anonymous pull returns a confusing
-`denied` / `not found`. To make it public, once, as the repository owner:
+The package is **public**: the first publish inherited the visibility of this
+repository, so `docker pull` works with no login and no token. Verified against
+the registry — an anonymous request for both `latest` and the `sha-` tag
+returns the manifest the workflow pushed.
+
+If a pull ever comes back `denied` or `not found` for someone without
+credentials, the package has been made private. Change it back, as the
+repository owner:
 
 **Your profile → Packages → `meeter` → Package settings → Danger Zone →
 Change visibility → Public.**
@@ -199,6 +236,7 @@ so keep it to networks you trust.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
+| Container runs but nothing answers on any port | Started from the Docker Desktop **Run** button without a **Host port**, so no port is published | `docker ps` shows `80/tcp` and not `0.0.0.0:8080->80/tcp`. Recreate it with `-p 8080:80` — see [Publish the port](#publish-the-port-or-nothing-answers) |
 | `docker: error during connect` | Docker Desktop is not running | Start it, wait for the whale to settle |
 | `Bind for 0.0.0.0:8080 failed: port is already allocated` | Something else has 8080 | Change the port (above), or stop the other process |
 | Page loads but is unstyled | `ds/modernist.css` did not mount | `docker compose down` then `up -d`; check the folder was cloned intact |
