@@ -162,7 +162,7 @@ function initState() {
 
   state = {
     date: iso, people: seed, anchorId: seed[0].id,
-    nameDraft: '', query: '', listOpen: false, selected: null
+    nameDraft: '', query: '', listOpen: false, selected: []
   };
 }
 
@@ -237,25 +237,33 @@ function computeView() {
     var allWorking = cells.length > 0 && cells.every(function (c) { return c.working; });
     if (allWorking) overlapCount++;
 
+    /* A picked row stays picked until it is clicked again, so several
+       candidate slots can be compared side by side. The pick outranks every
+       other cell state, so the orange always reads as the selection. */
+    var isSel = state.selected.indexOf(h) !== -1;
+
     cells.forEach(function (c) {
-      if (allWorking) { c.bg = 'var(--color-accent-200)'; c.fg = 'var(--color-accent-800)'; c.weight = 800; }
+      if (isSel) { c.bg = 'var(--color-accent-400)'; c.fg = 'var(--color-accent-900)'; c.weight = c.working ? 800 : 600; }
+      else if (allWorking) { c.bg = 'var(--color-accent-200)'; c.fg = 'var(--color-accent-800)'; c.weight = 800; }
       else if (c.working) { c.bg = 'var(--color-neutral-100)'; c.fg = 'var(--color-text)'; c.weight = 600; }
       else if (c.night) { c.bg = 'var(--color-neutral-400)'; c.fg = 'var(--color-neutral-900)'; c.weight = 400; }
       else { c.bg = 'var(--color-neutral-200)'; c.fg = 'var(--color-neutral-700)'; c.weight = 400; }
     });
 
-    var isSel = state.selected === h;
     return {
-      key: h, label: fmt(h, 0), cells: cells,
+      key: h, label: fmt(h, 0), cells: cells, selected: isSel,
+      workingCount: cells.filter(function (c) { return c.working; }).length,
       mark: allWorking ? 'ALL' : '',
-      labelBg: allWorking ? 'var(--color-accent)' : (isSel ? 'var(--color-text)' : 'var(--color-surface)'),
-      labelFg: allWorking || isSel ? 'var(--color-bg)' : 'var(--color-neutral-700)',
-      outline: isSel ? '2px solid var(--color-text)' : 'none',
+      labelBg: isSel ? 'var(--color-accent-700)' : (allWorking ? 'var(--color-accent)' : 'var(--color-surface)'),
+      labelFg: isSel || allWorking ? 'var(--color-bg)' : 'var(--color-neutral-700)',
+      outline: isSel ? '2px solid var(--color-accent-700)' : 'none',
       z: isSel ? 2 : 1
     };
   });
 
-  var selRow = rows.find(function (r) { return r.key === state.selected; }) || null;
+  var selRows = rows.filter(function (r) { return r.selected; });
+  var multi = selRows.length > 1;
+  var slotTitle = function (r) { return r.label + '–' + fmt((r.key + 1) % 24, 0); };
   var longDate = new Intl.DateTimeFormat('en-US', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'
   }).format(new Date(Date.UTC(dy, dmo - 1, dd, 12)));
@@ -308,16 +316,32 @@ function computeView() {
       : (overlapCount === 0
           ? (isWeekend ? 'Weekend — no working hours' : 'No shared hours')
           : overlapCount + (overlapCount === 1 ? ' hour' : ' hours')),
-    hasSelection: !!selRow,
-    selectionTitle: selRow && anchor
-      ? selRow.label + '–' + fmt((selRow.key + 1) % 24, 0) + ' ' + anchor.place
-      : '',
-    summary: selRow ? selRow.cells.map(function (c, i) {
-      return {
-        name: people[i].name, time: c.time, state: c.state,
-        fg: c.working ? 'var(--color-accent-800)' : 'var(--color-neutral-600)'
-      };
-    }) : []
+    hasSelection: selRows.length > 0,
+    selectionKicker: multi ? 'Proposed slots' : 'Proposed slot',
+    clearLabel: multi ? 'Clear all' : 'Clear',
+    selectionTitle: !selRows.length || !anchor
+      ? ''
+      : (multi
+          ? selRows.length + ' hours · ' + anchor.place
+          : slotTitle(selRows[0]) + ' ' + anchor.place),
+    /* One picked slot reads per participant; several read per slot, so the
+       picks stay comparable without the toolbar growing a row per person. */
+    summary: !selRows.length ? [] : (multi
+      ? selRows.map(function (r) {
+          return {
+            time: slotTitle(r),
+            meta: r.workingCount + ' of ' + people.length + ' working',
+            fg: r.workingCount === people.length
+              ? 'var(--color-accent-800)' : 'var(--color-neutral-600)'
+          };
+        })
+      : selRows[0].cells.map(function (c, i) {
+          return {
+            time: c.time,
+            meta: people[i].name + ' · ' + c.state,
+            fg: c.working ? 'var(--color-accent-800)' : 'var(--color-neutral-600)'
+          };
+        }))
   };
 }
 
@@ -401,27 +425,26 @@ function renderPeople(v) {
 
 function renderToolbar(v) {
   if (!v.hasSelection) {
-    setHTML(el.toolbar, '<div class="toolbar-hint">Click any hour row to propose a slot. ' +
-      'Rows in red are working hours for everyone. ' +
+    setHTML(el.toolbar, '<div class="toolbar-hint">Click any hour row to propose a slot, ' +
+      'and click it again to drop it. Picked rows stay orange; ' +
+      'rows in red are working hours for everyone. ' +
       'Click a column head to anchor the left rail to that person’s day.</div>');
     return;
   }
   var items = v.summary.map(function (s) {
     return '<div class="sel-item">' +
              '<div class="sel-time">' + esc(s.time) + '</div>' +
-             '<div class="sel-meta" style="color:' + s.fg + '">' +
-               esc(s.name) + ' · ' + esc(s.state) +
-             '</div>' +
+             '<div class="sel-meta" style="color:' + s.fg + '">' + esc(s.meta) + '</div>' +
            '</div>';
   }).join('');
   setHTML(el.toolbar,
     '<div class="sel-wrap">' +
       '<div class="sel-block">' +
-        '<div class="sel-kicker">Proposed slot</div>' +
+        '<div class="sel-kicker">' + esc(v.selectionKicker) + '</div>' +
         '<div class="sel-title">' + esc(v.selectionTitle) + '</div>' +
       '</div>' +
       '<div class="sel-summary">' + items + '</div>' +
-      '<button class="btn btn-secondary clear-btn" id="clearSelBtn">Clear</button>' +
+      '<button class="btn btn-secondary clear-btn" id="clearSelBtn">' + esc(v.clearLabel) + '</button>' +
     '</div>');
 }
 
@@ -446,6 +469,7 @@ function renderGrid(v) {
              '</div>';
     }).join('');
     return '<div class="grid-row" role="button" tabindex="0" data-row="' + row.key +
+             '" aria-pressed="' + (row.selected ? 'true' : 'false') +
              '" style="outline:' + row.outline + ';z-index:' + row.z + '">' +
              '<div class="row-label" style="background:' + row.labelBg + ';color:' + row.labelFg + '">' +
                '<span>' + esc(row.label) + '</span>' +
@@ -502,12 +526,21 @@ function delegateActivate(container, selector, handler) {
   container.addEventListener('keydown', run);
 }
 
+/* Clicking a row picks it; clicking it again drops it, so any number of
+   candidate hours can stay marked at once. */
+function toggleRow(hour) {
+  state.selected = state.selected.indexOf(hour) === -1
+    ? state.selected.concat([hour])
+    : state.selected.filter(function (h) { return h !== hour; });
+  render();
+}
+
 function nextWeekday() {
   var p = state.date.split('-').map(Number);
   var d = new Date(Date.UTC(p[0], p[1] - 1, p[2], 12));
   do { d.setUTCDate(d.getUTCDate() + 1); } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
   state.date = d.toISOString().slice(0, 10);
-  state.selected = null;
+  state.selected = [];
   render();
 }
 
@@ -532,7 +565,7 @@ function init() {
 
   el.dateInput.addEventListener('change', function (e) {
     state.date = e.target.value || state.date;
-    state.selected = null;
+    state.selected = [];
     render();
   });
   el.nameInput.addEventListener('input', function (e) { state.nameDraft = e.target.value; });
@@ -564,7 +597,7 @@ function init() {
     if (e.target.closest('#nextWeekdayBtn')) nextWeekday();
   });
   el.toolbar.addEventListener('click', function (e) {
-    if (e.target.closest('#clearSelBtn')) { state.selected = null; render(); }
+    if (e.target.closest('#clearSelBtn')) { state.selected = []; render(); }
   });
 
   delegateActivate(el.gridWrap, '[data-anchor]', function (t) {
@@ -572,8 +605,7 @@ function init() {
     render();
   });
   delegateActivate(el.gridWrap, '[data-row]', function (t) {
-    state.selected = +t.dataset.row;
-    render();
+    toggleRow(+t.dataset.row);
   });
 
   el.setWorkStart.value = settings.workStart;
@@ -594,7 +626,7 @@ function init() {
   });
   el.setHourRange.addEventListener('change', function (e) {
     settings.hourRange = e.target.value;
-    state.selected = null;
+    state.selected = [];
     render();
   });
 
