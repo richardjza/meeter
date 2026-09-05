@@ -26,7 +26,9 @@ input:focus-visible, select:focus-visible, button:focus-visible, div:focus-visib
   align-items: flex-end; justify-content: space-between; gap: 24px;
   padding: 18px 24px; border-bottom: 2px solid var(--color-text);
 }
-.brand-group { display: flex; align-items: baseline; gap: 14px; }
+.brand-group { display: flex; align-items: center; gap: 12px; }
+.brand-mark { display: block; width: 30px; height: 30px; flex: none; }
+.brand-text { display: flex; align-items: baseline; gap: 14px; }
 .app-brand { font-size: 19px; letter-spacing: 0.02em; text-transform: uppercase; margin-right: 0; }
 .brand-sub {
   font-size: 11px; font-weight: 600; letter-spacing: 0.14em;

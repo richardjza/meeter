@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Meeter">
   <!-- Meeter's mark, drawn in the Modernist system: flat colour, square
-       corners, ink ground (--color-text) and one accent band (--color-accent).
-       Three staggered bars are three participants' working days, offset by
-       time zone; the band is the hour that lands inside all of them. -->
+       corners, the ink ground of the color-text token and one band in
+       color-accent. Three staggered bars are three participants' working
+       days, offset by time zone; the band is the hour that lands inside
+       all of them. (XML comments cannot carry a double hyphen, so the
+       tokens are named here without their CSS custom-property prefix.) -->
   <rect width="32" height="32" fill="#201e1d"/>
   <g fill="#d7d3d3">
     <rect x="2" y="2" width="8" height="22"/>
