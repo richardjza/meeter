@@ -62,3 +62,14 @@ jobs:
 
       - name: Run the test suite
         run: npm test
+
+      # Only on a red run: the trace replays the failing moment action by
+      # action, so a CI failure can be diagnosed without reproducing it.
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14

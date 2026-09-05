@@ -6,10 +6,15 @@
 
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { startServer } from './server.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+/* Diagnostics for a failed run. Written only on failure, and picked up as a
+   CI artifact — a red run should not need reproducing locally to understand. */
+const RESULTS = path.join(ROOT, 'test-results');
 
 let passed = 0;
 const failures = [];
@@ -45,6 +50,11 @@ const context = await browser.newContext({
    font request may have to time out first in a sandboxed environment. */
 context.setDefaultTimeout(5000);
 context.setDefaultNavigationTimeout(30000);
+/* Recorded for the whole run but kept only when something fails. The trace
+   carries a screenshot and a DOM snapshot per action, so the failing moment
+   can be replayed rather than guessed at. */
+await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+
 const page = await context.newPage();
 
 const pageErrors = [];
@@ -210,8 +220,29 @@ try {
   console.log('\n  ✗ the run aborted: ' + (err && err.message ? err.message.split('\n')[0] : err));
   failures.push('the run aborted before completing');
 } finally {
+  await saveDiagnostics(failures.length > 0);
   await browser.close();
   await server.close();
+}
+
+async function saveDiagnostics(failed) {
+  /* Diagnostics must never mask the result they describe, so every step here
+     is best-effort: a browser that died mid-run cannot be screenshotted. */
+  try {
+    if (!failed) {
+      await context.tracing.stop();
+      return;
+    }
+    await mkdir(RESULTS, { recursive: true });
+    await page.screenshot({ path: path.join(RESULTS, 'final-state.png'), fullPage: true })
+      .catch(e => console.log('  (could not capture a screenshot: ' + e.message.split('\n')[0] + ')'));
+    await context.tracing.stop({ path: path.join(RESULTS, 'trace.zip') });
+    console.log('\nDiagnostics written to test-results/');
+    console.log('  final-state.png  the page as the run left it');
+    console.log('  trace.zip        replay with: npx playwright show-trace test-results/trace.zip');
+  } catch (e) {
+    console.log('  (diagnostics unavailable: ' + String(e).split('\n')[0] + ')');
+  }
 }
 
 console.log('\n' + passed + ' passed, ' + failures.length + ' failed');
