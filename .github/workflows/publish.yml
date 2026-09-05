@@ -1,0 +1,110 @@
+name: Publish image
+
+# Every push to main republishes the image, so ghcr.io always carries the
+# current state of the default branch. Pull requests build and smoke-test the
+# image without publishing, which keeps a broken Dockerfile or nginx config
+# from reaching the registry in the first place.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+# A new push supersedes any run still in flight for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build and publish to ghcr.io
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # buildx gives the build the GitHub Actions layer cache used below;
+      # the default docker driver cannot read or write it.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ghcr.io/richardjza/meeter, derived from the repository so a fork
+      # publishes under its own owner rather than this one.
+      - name: Derive the image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=long
+
+      # Built into the runner's local daemon first, so the smoke test below
+      # runs against the exact image the push step then publishes. The push
+      # rebuild is a cache hit, not a second build.
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: meeter:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The app's own suite covers the page; this covers the packaging around
+      # it — that nginx starts on the baked-in config and that every file
+      # index.html asks for is actually present in the image.
+      - name: Smoke-test the image
+        run: |
+          set -euo pipefail
+          docker run -d --name meeter-ci -p 8080:80 meeter:ci
+
+          for _ in $(seq 1 30); do
+            curl -fsS -o /dev/null http://localhost:8080/ && break
+            sleep 1
+          done
+
+          status=0
+          for path in / /app.css /app.js /ds/modernist.css \
+                      /favicon.svg /favicon.ico /apple-touch-icon.png; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$path")
+            echo "$code  $path"
+            [ "$code" = 200 ] || status=1
+          done
+
+          curl -fsS http://localhost:8080/ | grep -q 'Meeter — Meeting Planner' || {
+            echo 'index.html did not come back with the expected title'
+            status=1
+          }
+
+          if [ "$status" -ne 0 ]; then
+            echo '--- container log ---'
+            docker logs meeter-ci
+          fi
+          docker rm -f meeter-ci >/dev/null
+          exit "$status"
+
+      # GITHUB_TOKEN carries packages:write on a push to this repository. Fork
+      # pull requests get a read-only token, which is why they never reach here.
+      - name: Log in to ghcr.io
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
